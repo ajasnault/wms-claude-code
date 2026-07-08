@@ -45,11 +45,18 @@ export default {
         },
         status: {
           new: 'hsl(var(--status-new))',
-          progress: 'hsl(var(--status-progress))',
+          'in-progress': 'hsl(var(--status-in-progress))',
           done: 'hsl(var(--status-done))',
           late: 'hsl(var(--status-late))',
           standby: 'hsl(var(--status-standby))',
           out: 'hsl(var(--status-out))',
+        },
+        priority: {
+          urgent: 'hsl(var(--priority-urgent))',
+          'before-1pm': 'hsl(var(--priority-before-1pm))',
+          'end-of-day': 'hsl(var(--priority-end-of-day))',
+          'end-of-week': 'hsl(var(--priority-end-of-week))',
+          'next-week': 'hsl(var(--priority-next-week))',
         },
       },
       borderRadius: {

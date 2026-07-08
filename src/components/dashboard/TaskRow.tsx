@@ -5,7 +5,7 @@ import { calculateWorkUnits } from "@/lib/workUnitCalculator"
 import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { StatusBadge } from "@/components/dashboard/StatusBadge"
-import { PRIORITY_LABELS, TASK_TYPE_LABELS, type Task, type TaskStatus } from "@/types/database"
+import { PRIORITY_CLASSES, PRIORITY_LABELS, TASK_TYPE_LABELS, type Task, type TaskStatus } from "@/types/database"
 
 export function TaskRow({ task, linked = false }: { task: Task; linked?: boolean }) {
   const { isAdmin } = useAuth()
@@ -44,7 +44,9 @@ export function TaskRow({ task, linked = false }: { task: Task; linked?: boolean
             {wu % 1 === 0 ? wu : wu.toFixed(2)} WU
           </span>
         )}
-        <span className="text-xs text-muted-foreground">{PRIORITY_LABELS[task.priority]}</span>
+        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_CLASSES[task.priority]}`}>
+          {PRIORITY_LABELS[task.priority]}
+        </span>
         <Select value={task.status} onValueChange={handleChange}>
           <SelectTrigger className="h-auto w-auto border-none bg-transparent p-0 [&>svg]:hidden">
             <StatusBadge status={task.status} />

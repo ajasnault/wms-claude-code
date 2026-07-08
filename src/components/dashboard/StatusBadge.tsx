@@ -3,7 +3,7 @@ import { STATUS_LABELS, type TaskStatus } from "@/types/database"
 
 const STATUS_CLASSES: Record<TaskStatus, string> = {
   NEW: "bg-status-new/15 text-status-new border-status-new/30",
-  IN_PROGRESS: "bg-status-progress/15 text-status-progress border-status-progress/30",
+  IN_PROGRESS: "bg-status-in-progress/15 text-status-in-progress border-status-in-progress/30",
   DONE: "bg-status-done/15 text-status-done border-status-done/30",
   LATE: "bg-status-late/15 text-status-late border-status-late/30",
   STANDBY: "bg-status-standby/15 text-status-standby border-status-standby/30",

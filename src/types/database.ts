@@ -102,6 +102,14 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   5: "Next Week",
 }
 
+export const PRIORITY_CLASSES: Record<TaskPriority, string> = {
+  1: "bg-priority-urgent/15 text-priority-urgent",
+  2: "bg-priority-before-1pm/15 text-priority-before-1pm",
+  3: "bg-priority-end-of-day/15 text-priority-end-of-day",
+  4: "bg-priority-end-of-week/15 text-priority-end-of-week",
+  5: "bg-priority-next-week/15 text-priority-next-week",
+}
+
 export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   ERP_DOCUMENT: "Shipment (ERP)",
   PREP_DRY_ICE: "Prep Dry Ice",

@@ -8,7 +8,7 @@ const STATUS_ORDER: TaskStatus[] = ["IN_PROGRESS", "LATE", "NEW", "STANDBY", "DO
 
 const STATUS_DOT: Record<TaskStatus, string> = {
   NEW: "bg-status-new",
-  IN_PROGRESS: "bg-status-progress",
+  IN_PROGRESS: "bg-status-in-progress",
   DONE: "bg-status-done",
   LATE: "bg-status-late",
   STANDBY: "bg-status-standby",
