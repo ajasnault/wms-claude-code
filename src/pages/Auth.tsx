@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
+const DEMO_EMAIL = "visiteur-demo@wms-portfolio.dev"
+const DEMO_PASSWORD = "Demo-Visiteur-2026!"
+
 export default function Auth() {
   const { user, signIn, signUp } = useAuth()
   const [mode, setMode] = useState<"signin" | "signup">("signin")
@@ -14,8 +17,18 @@ export default function Auth() {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [demoLoading, setDemoLoading] = useState(false)
 
   if (user) return <Navigate to="/" replace />
+
+  async function handleDemoLogin() {
+    setError(null)
+    setInfo(null)
+    setDemoLoading(true)
+    const { error } = await signIn(DEMO_EMAIL, DEMO_PASSWORD)
+    if (error) setError(error)
+    setDemoLoading(false)
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -88,6 +101,21 @@ export default function Auth() {
           >
             {mode === "signin" ? "No account? Sign up" : "Already have an account? Sign in"}
           </button>
+
+          <div className="mt-6 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={demoLoading}
+              onClick={handleDemoLogin}
+            >
+              {demoLoading ? "..." : "Voir la démo (visiteur)"}
+            </Button>
+            <p className="mt-2 text-center text-xs text-muted-foreground">
+              Accès complet en tant qu'administrateur, sans créer de compte.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>
