@@ -246,4 +246,6 @@ export const UNIT_TYPE_LABELS: Record<UnitType, string> = {
   BOTTLE: "Bottles",
   PALLET: "Pallets",
   PACKAGE: "Packages",
+  FIXED: "Fixed",
+  CARTON: "Cartons",
 }

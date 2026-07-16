@@ -128,7 +128,7 @@ function BuildingCapacitySection({ building }: { building: Building }) {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit=" WU" />
-                <Tooltip formatter={(v: number) => `${v} WU`} />
+                <Tooltip formatter={(v) => `${v} WU`} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="capacity" name="Capacité" fill="#22c55e" opacity={0.75} radius={[2, 2, 0, 0]} />
                 <Bar dataKey="workload" name="Charge" fill="#3b82f6" opacity={0.85} radius={[2, 2, 0, 0]} />
@@ -278,7 +278,7 @@ export default function Capacity() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold">Capacity Planning</h1>
         <p className="text-sm text-muted-foreground">
-          FTE = {fteWu} WU/jour · présence par jour : 0 / 25 / 50 / 75 / 100% · prévision 10 jours ouvrés
+          Présence par jour : 0 / 25 / 50 / 75 / 100% · prévision 10 jours ouvrés
         </p>
       </header>
       <div className="grid gap-6 lg:grid-cols-2">
