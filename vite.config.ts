@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/wms-claude-code/',
   plugins: [react()],
   resolve: {
     alias: {
