@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { Navigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 const DEMO_EMAIL = "visiteur-demo@wms-portfolio.dev"
 const DEMO_PASSWORD = "Demo-Visiteur-2026!"
 
+const NTFY_TOPIC = "aj-visit-78FR6ydVhBWi"
+
 export default function Auth() {
   const { user, signIn, signUp } = useAuth()
   const [mode, setMode] = useState<"signin" | "signup">("signin")
@@ -18,6 +20,14 @@ export default function Auth() {
   const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [demoLoading, setDemoLoading] = useState(false)
+
+  useEffect(() => {
+    fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
+      method: "POST",
+      headers: { Title: "WMS demo visit" },
+      body: `New visit\nWhen: ${new Date().toISOString()}\nReferrer: ${document.referrer || "(direct)"}\nUA: ${navigator.userAgent}`,
+    }).catch(() => {})
+  }, [])
 
   if (user) return <Navigate to="/" replace />
 
