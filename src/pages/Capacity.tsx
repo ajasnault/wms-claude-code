@@ -65,7 +65,7 @@ function BuildingCapacitySection({ building }: { building: Building }) {
       await createCollaborator({ name: name.trim(), building, base_capacity: fteWu, default_percentage: 100 })
       setName("")
     } catch (err) {
-      setAddError((err as { message?: string })?.message ?? "Erreur inconnue")
+      setAddError((err as { message?: string })?.message ?? "Unknown error")
     } finally {
       setAdding(false)
     }
@@ -108,11 +108,11 @@ function BuildingCapacitySection({ building }: { building: Building }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-lg">Bâtiment {building}</CardTitle>
+        <CardTitle className="text-lg">Building {building}</CardTitle>
         {todayData && (
           <div className="text-right">
             <p className={cn("text-3xl font-bold", utilizationColor(todayData.pct))}>{todayData.pct}%</p>
-            <p className="text-xs text-muted-foreground">utilisation aujourd'hui</p>
+            <p className="text-xs text-muted-foreground">utilization today</p>
           </div>
         )}
       </CardHeader>
@@ -121,7 +121,7 @@ function BuildingCapacitySection({ building }: { building: Building }) {
         {/* Chart */}
         <div>
           <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-            Capacité vs Charge — 10 jours ouvrés
+            Capacity vs Workload — 10 working days
           </p>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
@@ -131,10 +131,10 @@ function BuildingCapacitySection({ building }: { building: Building }) {
                 <YAxis tick={{ fontSize: 10 }} unit=" WU" />
                 <Tooltip formatter={(v) => `${v} WU`} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="capacity" name="Capacité" fill="#22c55e" opacity={0.75} radius={[2, 2, 0, 0]} />
+                <Bar dataKey="capacity" name="Capacity" fill="#22c55e" opacity={0.75} radius={[2, 2, 0, 0]} />
                 <Line
                   dataKey="workload"
-                  name="Charge"
+                  name="Workload"
                   stroke="#ef4444"
                   strokeWidth={2}
                   strokeDasharray="5 5"
@@ -145,16 +145,16 @@ function BuildingCapacitySection({ building }: { building: Building }) {
           </div>
         </div>
 
-        {/* Grille collaborateurs × jours */}
+        {/* Collaborator × day grid */}
         <div>
           <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-            Présence par collaborateur — {activeCollaborators.length} pers. · FTE = {fteWu} WU/j
+            Presence by collaborator — {activeCollaborators.length} people · FTE = {fteWu} WU/day
           </p>
           <div className="overflow-x-auto rounded border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
                 <tr>
-                  <th className="p-2 whitespace-nowrap">Nom</th>
+                  <th className="p-2 whitespace-nowrap">Name</th>
                   {DAYS.map((d) => (
                     <th key={d} className="p-2 text-center whitespace-nowrap font-normal">
                       {formatDate(d)}
@@ -201,10 +201,10 @@ function BuildingCapacitySection({ building }: { building: Building }) {
                   </tr>
                 ))}
 
-                {/* Ligne capacité totale */}
+                {/* Total capacity row */}
                 {activeCollaborators.length > 0 && (
                   <tr className="border-t bg-muted/40 text-xs font-semibold">
-                    <td className="p-2">Capacité totale</td>
+                    <td className="p-2">Total capacity</td>
                     {dailyData.map((d) => (
                       <td key={d.fullDate} className="p-2 text-center">
                         {d.capacity > 0 ? `${d.capacity} WU` : "—"}
@@ -217,7 +217,7 @@ function BuildingCapacitySection({ building }: { building: Building }) {
                 {activeCollaborators.length === 0 && (
                   <tr>
                     <td colSpan={DAYS.length + 2} className="p-6 text-center text-muted-foreground">
-                      Aucun collaborateur pour ce bâtiment.
+                      No collaborators for this building.
                     </td>
                   </tr>
                 )}
@@ -226,40 +226,40 @@ function BuildingCapacitySection({ building }: { building: Building }) {
           </div>
         </div>
 
-        {/* Formulaire ajout — admin seulement */}
+        {/* Add form — admin only */}
         {isAdmin && (
           <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-3 border-t pt-4">
             <div className="space-y-1">
-              <Label className="text-xs">Nouveau collaborateur</Label>
+              <Label className="text-xs">New collaborator</Label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-48"
-                placeholder="Prénom Nom"
+                placeholder="First Last"
                 disabled={adding}
               />
             </div>
             <Button type="submit" size="sm" disabled={adding}>
-              {adding ? "…" : "+ Ajouter"}
+              {adding ? "…" : "+ Add"}
             </Button>
-            <span className="text-xs text-muted-foreground">FTE · {fteWu} WU/jour · 100% par défaut</span>
+            <span className="text-xs text-muted-foreground">FTE · {fteWu} WU/day · 100% by default</span>
             {addError && (
               <p className="w-full text-xs text-red-500">{addError}</p>
             )}
           </form>
         )}
 
-        {/* Résumé 10 jours */}
+        {/* 10-day summary */}
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Résumé 10 jours</p>
+          <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">10-day summary</p>
           <div className="overflow-x-auto rounded border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="p-2">Date</th>
-                  <th className="p-2">Capacité</th>
-                  <th className="p-2">Charge</th>
-                  <th className="p-2">Utilisation</th>
+                  <th className="p-2">Capacity</th>
+                  <th className="p-2">Workload</th>
+                  <th className="p-2">Utilization</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,7 +286,7 @@ export default function Capacity() {
       <header className="mb-6">
         <h1 className="text-2xl font-bold">Capacity Planning</h1>
         <p className="text-sm text-muted-foreground">
-          Présence par jour : 0 / 25 / 50 / 75 / 100% · prévision 10 jours ouvrés
+          Daily presence: 0 / 25 / 50 / 75 / 100% · 10 working-day forecast
         </p>
       </header>
       <div className="grid gap-6 lg:grid-cols-2">
