@@ -32,9 +32,18 @@ function matchesTask(e: WorkUnitMatrixEntry, task: Task): boolean {
 }
 
 export function calculateWorkUnits(task: Task, matrix: WorkUnitMatrixEntry[]): number {
-  const entry = matrix
-    .filter((e) => matchesTask(e, task))
-    .sort((a, b) => specificity(b) - specificity(a))[0]
-  if (!entry) return 0
+  const candidates = matrix.filter((e) => matchesTask(e, task))
+  if (candidates.length === 0) return 0
+
+  // Among the most specific matches, several entries can tie on specificity
+  // while differing in unit_type (e.g. one expects pallet_count, another
+  // package_count). Prefer whichever one the task actually has data for,
+  // instead of an arbitrary array-order pick that can land on an entry
+  // whose quantity field is empty even though the task's real data would
+  // match a tied entry.
+  const topSpecificity = Math.max(...candidates.map(specificity))
+  const topCandidates = candidates.filter((e) => specificity(e) === topSpecificity)
+  const entry = topCandidates.find((e) => quantityForUnitType(task, e.unit_type) > 0) ?? topCandidates[0]
+
   return entry.work_unit_value * quantityForUnitType(task, entry.unit_type)
 }
