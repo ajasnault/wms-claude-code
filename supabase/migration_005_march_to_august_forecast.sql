@@ -8,6 +8,8 @@
 -- Run once only — no de-dup key exists, re-running will duplicate rows.
 -- As of writing, August 2026 has 0 existing tasks in this table.
 
+begin;
+
 with date_map (march_date, august_date) as (
   values
     (date '2026-03-01', date '2026-08-02'),
@@ -58,7 +60,8 @@ from public.tasks t
 join date_map dm on dm.march_date = t.due_date
 where t.due_date between date '2026-03-01' and date '2026-03-31';
 
--- Review the result below, then run `commit;` or `rollback;` yourself.
 select due_date, count(*) from public.tasks
 where due_date between date '2026-08-01' and date '2026-08-31'
 group by due_date order by due_date;
+
+commit;

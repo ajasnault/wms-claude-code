@@ -17,7 +17,7 @@ export function useLateDetection() {
       await supabase
         .from("tasks")
         .update({ status: "LATE" })
-        .in("status", ["NEW", "IN_PROGRESS", "DONE"])
+        .in("status", ["NEW", "IN_PROGRESS"])
         .neq("type", "PREP_DRY_ICE")
         .or(`due_date.lt.${today},and(due_date.eq.${today},due_time.lt.${time})`)
     }
