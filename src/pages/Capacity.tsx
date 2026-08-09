@@ -1,9 +1,10 @@
 import { useMemo, useState, type FormEvent } from "react"
 import {
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -124,15 +125,22 @@ function BuildingCapacitySection({ building }: { building: Building }) {
           </p>
           <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+              <ComposedChart data={dailyData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} unit=" WU" />
                 <Tooltip formatter={(v) => `${v} WU`} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="capacity" name="Capacité" fill="#22c55e" opacity={0.75} radius={[2, 2, 0, 0]} />
-                <Bar dataKey="workload" name="Charge" fill="#3b82f6" opacity={0.85} radius={[2, 2, 0, 0]} />
-              </BarChart>
+                <Line
+                  dataKey="workload"
+                  name="Charge"
+                  stroke="#ef4444"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ r: 3, fill: "#ef4444" }}
+                />
+              </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
