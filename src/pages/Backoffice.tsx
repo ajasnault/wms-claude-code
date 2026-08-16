@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useWorkUnitMatrix } from "@/hooks/useWorkUnitMatrix"
 import { calculateWorkUnits } from "@/lib/workUnitCalculator"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StatusBadge } from "@/components/dashboard/StatusBadge"
 import { TaskFormDialog } from "@/components/backoffice/TaskFormDialog"
@@ -152,6 +153,7 @@ function groupCommonShipments(tasks: Task[], building: Building): Row[] {
 export default function Backoffice() {
   const [building, setBuilding] = useState<Building>("K")
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL")
+  const [search, setSearch] = useState("")
   const [orphanDryIceOnly, setOrphanDryIceOnly] = useState(false)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
@@ -180,10 +182,18 @@ export default function Backoffice() {
 
   const filtered = useMemo(() => {
     const byStatus = statusFilter === "ALL" ? tasks : tasks.filter((t) => t.status === statusFilter)
-    return [...byStatus].sort(
+    const q = search.trim().toLowerCase()
+    const bySearch = q
+      ? byStatus.filter((t) =>
+          [t.erp_document_number, t.k2_reference, destinationLabel(t, building), carrierLabel(t), t.notes]
+            .filter(Boolean)
+            .some((field) => field!.toLowerCase().includes(q))
+        )
+      : byStatus
+    return [...bySearch].sort(
       (a, b) => a.due_date.localeCompare(b.due_date) || (a.due_time ?? "").localeCompare(b.due_time ?? "")
     )
-  }, [tasks, statusFilter])
+  }, [tasks, statusFilter, search, building])
 
   const { main, childrenByParent } = useMemo(() => linkPrepDryIce(filtered), [filtered])
 
@@ -426,6 +436,13 @@ export default function Backoffice() {
             ))}
           </SelectContent>
         </Select>
+
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search ERP #, K2 ref, destination, carrier, notes…"
+          className="w-72"
+        />
 
         <Button
           variant={orphanDryIceOnly ? "default" : "outline"}
