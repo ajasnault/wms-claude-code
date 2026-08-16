@@ -29,7 +29,7 @@ const DRY_ICE_KG_PER_CARTON = 20 // documented: 3 cartons ≈ 60 kg
 
 function cardClass(task: Task, fallback: string): string {
   if (task.carrier === "DHL") return cn(fallback, "bg-yellow-100/60")
-  if (task.destination_k === "ANGERS_FR") return cn(fallback, "bg-blue-50")
+  if (task.destination_k === "ANGERS_FR") return cn(fallback, "bg-blue-100 border-blue-200")
   return fallback
 }
 
