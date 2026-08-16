@@ -65,6 +65,67 @@ function quantityBadges(task: Task): string[] {
 
 type Row = { kind: "single"; task: Task } | { kind: "common"; key: string; tasks: Task[] }
 
+type DayGroup = { key: string; label: string; rows: Row[]; defaultOpen: boolean }
+
+function rowDate(row: Row): string {
+  return row.kind === "single" ? row.task.due_date : row.tasks[0].due_date
+}
+
+function startOfToday(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function diffInDays(dateStr: string, today: Date): number {
+  const d = new Date(`${dateStr}T00:00:00`)
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000)
+}
+
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`)
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })
+}
+
+function buildDayGroups(rows: Row[]): DayGroup[] {
+  const today = startOfToday()
+  const monIndex = (today.getDay() + 6) % 7 // Mon=0 .. Sun=6
+  const daysUntilWeekEnd = 6 - monIndex // days left until (and including) this Sunday
+
+  const groups = new Map<string, DayGroup>()
+  for (const row of rows) {
+    const dateStr = rowDate(row)
+    const diff = diffInDays(dateStr, today)
+    let key: string
+    let label: string
+    let defaultOpen: boolean
+    if (diff < 0) {
+      key = "overdue"
+      label = "Overdue"
+      defaultOpen = true
+    } else if (diff === 0) {
+      key = "today"
+      label = "Today"
+      defaultOpen = true
+    } else if (diff === 1) {
+      key = "tomorrow"
+      label = "Tomorrow"
+      defaultOpen = true
+    } else {
+      key = dateStr
+      label = formatDayLabel(dateStr)
+      defaultOpen = diff <= daysUntilWeekEnd
+    }
+    let group = groups.get(key)
+    if (!group) {
+      group = { key, label, rows: [], defaultOpen }
+      groups.set(key, group)
+    }
+    group.rows.push(row)
+  }
+  return [...groups.values()]
+}
+
 function groupCommonShipments(tasks: Task[], building: Building): Row[] {
   const counts = new Map<string, number>()
   for (const t of tasks) {
@@ -119,7 +180,7 @@ export default function Backoffice() {
   const filtered = useMemo(() => {
     const byStatus = statusFilter === "ALL" ? tasks : tasks.filter((t) => t.status === statusFilter)
     return [...byStatus].sort(
-      (a, b) => b.due_date.localeCompare(a.due_date) || (b.due_time ?? "").localeCompare(a.due_time ?? "")
+      (a, b) => a.due_date.localeCompare(b.due_date) || (a.due_time ?? "").localeCompare(b.due_time ?? "")
     )
   }, [tasks, statusFilter])
 
@@ -131,6 +192,23 @@ export default function Backoffice() {
     () => (orphanDryIceOnly ? orphanDryIce.map((task) => ({ kind: "single", task }) as Row) : groupCommonShipments(main, building)),
     [orphanDryIceOnly, orphanDryIce, main, building]
   )
+
+  const dayGroups = useMemo(() => buildDayGroups(rows), [rows])
+
+  const [collapsedOverrides, setCollapsedOverrides] = useState<Set<string>>(new Set())
+
+  function toggleDay(key: string) {
+    setCollapsedOverrides((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  function isDayOpen(group: DayGroup) {
+    return collapsedOverrides.has(group.key) ? !group.defaultOpen : group.defaultOpen
+  }
 
   function openCreate() {
     setEditingTask(undefined)
@@ -253,6 +331,64 @@ export default function Backoffice() {
     )
   }
 
+  function renderRow(row: Row) {
+    if (row.kind === "single") {
+      return (
+        <Fragment key={row.task.id}>
+          <TaskCard task={row.task} />
+          {(childrenByParent.get(row.task.id) ?? []).map((child) => (
+            <TaskCard key={child.id} task={child} linked />
+          ))}
+        </Fragment>
+      )
+    }
+    const [first] = row.tasks
+    const isOpen = expandedGroups.has(row.key)
+    const dryIce = dryIceTotals(row.tasks, childrenByParent)
+    const wuTotal = workUnitsTotal(row.tasks, matrix)
+    return (
+      <Fragment key={row.key}>
+        <button
+          type="button"
+          onClick={() => toggleGroup(row.key)}
+          className={cardClass(
+            first,
+            "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium text-muted-foreground bg-accent/40"
+          )}
+        >
+          <span>
+            Commun · {first.due_date} · {destinationLabel(first, building)} · {carrierLabel(first)} · {row.tasks.length}{" "}
+            envois
+            {wuTotal > 0 && ` · ${wuTotal.toFixed(2)} WU`}
+            {dryIce && (
+              <>
+                {" "}
+                · ❄️ {dryIce.cartons} cartons ({dryIce.kg} kg)
+              </>
+            )}
+          </span>
+          {isOpen ? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          )}
+        </button>
+        {isOpen && (
+          <div className="space-y-2 pl-3">
+            {row.tasks.map((task) => (
+              <Fragment key={task.id}>
+                <TaskCard task={task} />
+                {(childrenByParent.get(task.id) ?? []).map((child) => (
+                  <TaskCard key={child.id} task={child} linked />
+                ))}
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </Fragment>
+    )
+  }
+
   return (
     <div className="p-6">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -309,62 +445,31 @@ export default function Backoffice() {
 
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
 
-      <div className="space-y-2">
-        {rows.map((row) => {
-          if (row.kind === "single") {
-            return (
-              <Fragment key={row.task.id}>
-                <TaskCard task={row.task} />
-                {(childrenByParent.get(row.task.id) ?? []).map((child) => (
-                  <TaskCard key={child.id} task={child} linked />
-                ))}
-              </Fragment>
-            )
-          }
-          const [first] = row.tasks
-          const isOpen = expandedGroups.has(row.key)
-          const dryIce = dryIceTotals(row.tasks, childrenByParent)
-          const wuTotal = workUnitsTotal(row.tasks, matrix)
+      <div className="space-y-4">
+        {dayGroups.map((group) => {
+          const isOpen = isDayOpen(group)
           return (
-            <Fragment key={row.key}>
+            <div key={group.key}>
               <button
                 type="button"
-                onClick={() => toggleGroup(row.key)}
-                className={cardClass(
-                  first,
-                  "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium text-muted-foreground bg-accent/40"
+                onClick={() => toggleDay(group.key)}
+                className={cn(
+                  "sticky top-0 z-10 flex w-full items-center justify-between gap-2 border-b bg-background/95 px-1 py-2 text-left text-sm font-semibold backdrop-blur",
+                  group.key === "overdue" && "text-destructive"
                 )}
               >
                 <span>
-                  Commun · {first.due_date} · {destinationLabel(first, building)} · {carrierLabel(first)} ·{" "}
-                  {row.tasks.length} envois
-                  {wuTotal > 0 && ` · ${wuTotal.toFixed(2)} WU`}
-                  {dryIce && (
-                    <>
-                      {" "}
-                      · ❄️ {dryIce.cartons} cartons ({dryIce.kg} kg)
-                    </>
-                  )}
+                  {group.label}{" "}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">({group.rows.length})</span>
                 </span>
                 {isOpen ? (
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                  <ChevronDown className="h-4 w-4 shrink-0" />
                 ) : (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                  <ChevronRight className="h-4 w-4 shrink-0" />
                 )}
               </button>
-              {isOpen && (
-                <div className="space-y-2 pl-3">
-                  {row.tasks.map((task) => (
-                    <Fragment key={task.id}>
-                      <TaskCard task={task} />
-                      {(childrenByParent.get(task.id) ?? []).map((child) => (
-                        <TaskCard key={child.id} task={child} linked />
-                      ))}
-                    </Fragment>
-                  ))}
-                </div>
-              )}
-            </Fragment>
+              {isOpen && <div className="mt-2 space-y-2">{group.rows.map((row) => renderRow(row))}</div>}
+            </div>
           )
         })}
         {!isLoading && rows.length === 0 && (
