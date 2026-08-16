@@ -32,12 +32,7 @@ function cardClass(task: Task, fallback: string): string {
   if (task.destination_k === "WAVRE_BE") return cn(fallback, "bg-rose-100 border-rose-200")
   if (task.carrier === "DHL") return cn(fallback, "bg-yellow-100/60")
   if (task.destination_k === "ANGERS_FR") return cn(fallback, "bg-blue-100 border-blue-200")
-  if (
-    task.carrier === "TNT_FEDEX" &&
-    task.destination_k !== "ANGERS_FR" &&
-    task.destination_k !== "WAVRE_BE"
-  )
-    return cn(fallback, "bg-purple-100 border-purple-200")
+  if (task.carrier === "TNT_FEDEX") return cn(fallback, "bg-purple-100 border-purple-200")
   return fallback
 }
 
