@@ -295,7 +295,7 @@ export default function Backoffice() {
               {wu.toFixed(2)} WU
             </span>
           )}
-          {task.cmr_status && (
+          {task.type !== "PREP_DRY_ICE" && task.cmr_status && (
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 text-xs font-medium",
@@ -305,26 +305,30 @@ export default function Backoffice() {
               {CMR_STATUS_LABELS[task.cmr_status]}
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => updateTask(task.id, { k2_closed: !task.k2_closed })}
-            className={cn(
-              "rounded border px-1.5 py-0.5 text-xs font-medium",
-              task.k2_closed ? "border-status-done/40 bg-status-done/15 text-status-done" : "text-muted-foreground"
-            )}
-          >
-            {task.k2_closed ? "✓" : "○"} K2 closed
-          </button>
-          <button
-            type="button"
-            onClick={() => updateTask(task.id, { pgi_done: !task.pgi_done })}
-            className={cn(
-              "rounded border px-1.5 py-0.5 text-xs font-medium",
-              task.pgi_done ? "border-status-done/40 bg-status-done/15 text-status-done" : "text-muted-foreground"
-            )}
-          >
-            {task.pgi_done ? "✓" : "○"} PGI done
-          </button>
+          {task.type !== "PREP_DRY_ICE" && (
+            <button
+              type="button"
+              onClick={() => updateTask(task.id, { k2_closed: !task.k2_closed })}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-xs font-medium",
+                task.k2_closed ? "border-status-done/40 bg-status-done/15 text-status-done" : "text-muted-foreground"
+              )}
+            >
+              {task.k2_closed ? "✓" : "○"} K2 closed
+            </button>
+          )}
+          {task.type !== "PREP_DRY_ICE" && (
+            <button
+              type="button"
+              onClick={() => updateTask(task.id, { pgi_done: !task.pgi_done })}
+              className={cn(
+                "rounded border px-1.5 py-0.5 text-xs font-medium",
+                task.pgi_done ? "border-status-done/40 bg-status-done/15 text-status-done" : "text-muted-foreground"
+              )}
+            >
+              {task.pgi_done ? "✓" : "○"} PGI done
+            </button>
+          )}
         </div>
       </div>
     )
