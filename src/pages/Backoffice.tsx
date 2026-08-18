@@ -1,4 +1,4 @@
-import { Archive, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Snowflake, Truck } from "lucide-react"
+import { Archive, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Snowflake, Truck, X } from "lucide-react"
 import { Fragment, useMemo, useState } from "react"
 import { useTasks, useTaskMutations } from "@/hooks/useTasks"
 import { useAuth } from "@/hooks/useAuth"
@@ -129,6 +129,10 @@ export default function Backoffice() {
   const [search, setSearch] = useState("")
   const [orphanDryIceOnly, setOrphanDryIceOnly] = useState(false)
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
+  const [dateFilterMode, setDateFilterMode] = useState<"single" | "range">("single")
+  const [dateSingle, setDateSingle] = useState("")
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -164,12 +168,20 @@ export default function Backoffice() {
             .some((field) => field!.toLowerCase().includes(q))
         )
       : byStatus
+    const byDate =
+      dateFilterMode === "single"
+        ? dateSingle
+          ? bySearch.filter((t) => t.due_date === dateSingle)
+          : bySearch
+        : dateFrom || dateTo
+          ? bySearch.filter((t) => (!dateFrom || t.due_date >= dateFrom) && (!dateTo || t.due_date <= dateTo))
+          : bySearch
     const dir = sortDir === "asc" ? 1 : -1
-    return [...bySearch].sort(
+    return [...byDate].sort(
       (a, b) =>
         dir * (a.due_date.localeCompare(b.due_date) || (a.due_time ?? "").localeCompare(b.due_time ?? ""))
     )
-  }, [tasks, statusFilter, search, building, sortDir])
+  }, [tasks, statusFilter, search, building, sortDir, dateFilterMode, dateSingle, dateFrom, dateTo])
 
   const { main, childrenByParent } = useMemo(() => linkPrepDryIce(filtered), [filtered])
 
@@ -379,6 +391,63 @@ export default function Backoffice() {
           {sortDir === "asc" ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
           Date {sortDir === "asc" ? "(soonest first)" : "(latest first)"}
         </Button>
+
+        <div className="flex items-center gap-1.5 rounded-md border px-2 py-1">
+          <Button
+            variant={dateFilterMode === "single" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setDateFilterMode("single")}
+          >
+            Date
+          </Button>
+          <Button
+            variant={dateFilterMode === "range" ? "default" : "ghost"}
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setDateFilterMode("range")}
+          >
+            Range
+          </Button>
+          {dateFilterMode === "single" ? (
+            <Input
+              type="date"
+              value={dateSingle}
+              onChange={(e) => setDateSingle(e.target.value)}
+              className="h-7 w-36 text-xs"
+            />
+          ) : (
+            <>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-7 w-36 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">→</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-7 w-36 text-xs"
+              />
+            </>
+          )}
+          {(dateSingle || dateFrom || dateTo) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-1.5"
+              onClick={() => {
+                setDateSingle("")
+                setDateFrom("")
+                setDateTo("")
+              }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
 
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={() => filtered.length && exportTasksToCsv(filtered)}>
