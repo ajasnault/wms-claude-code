@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Snowflake, Truck } from "lucide-react"
+import { Archive, ChevronDown, ChevronRight, Snowflake, Truck } from "lucide-react"
 import { Fragment, useMemo, useState } from "react"
 import { useTasks, useTaskMutations } from "@/hooks/useTasks"
 import { useAuth } from "@/hooks/useAuth"
@@ -19,14 +19,26 @@ import {
   TASK_TYPE_LABELS,
   TRANSPORT_MODE_LABELS,
   type Building,
+  type CmrStatus,
   type Task,
   type TaskStatus,
   type WorkUnitMatrixEntry,
 } from "@/types/database"
 
+const CMR_STATUSES: CmrStatus[] = ["IN_WAITING", "RECEIVED", "CHECKED_APPROVED", "TO_BE_MODIFIED", "MANUAL", "NA"]
+
 const STATUSES: TaskStatus[] = ["NEW", "IN_PROGRESS", "DONE", "LATE", "STANDBY", "OUT"]
 
 const DRY_ICE_KG_PER_CARTON = 20 // documented: 3 cartons ≈ 60 kg
+
+const OLD_SHIPMENT_DAYS = 45
+
+const MONTH_LABEL_FORMAT = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" })
+
+function monthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number)
+  return MONTH_LABEL_FORMAT.format(new Date(year, month - 1, 1))
+}
 
 function cardClass(task: Task, fallback: string): string {
   if (task.destination_k === "WAVRE_BE") return cn(fallback, "bg-rose-100 border-rose-200")
@@ -66,23 +78,44 @@ function quantityBadges(task: Task): string[] {
   return badges
 }
 
-type Row = { kind: "single"; task: Task } | { kind: "common"; key: string; tasks: Task[] }
+type Row =
+  | { kind: "single"; task: Task }
+  | { kind: "common"; key: string; tasks: Task[] }
+  | { kind: "month"; key: string; tasks: Task[] }
 
-function groupCommonShipments(tasks: Task[], building: Building): Row[] {
+function groupCommonShipments(tasks: Task[], building: Building, oldCutoff: string): Row[] {
   const counts = new Map<string, number>()
   for (const t of tasks) {
+    if (t.due_date < oldCutoff) continue
     const key = groupKey(t, building)
     if (key) counts.set(key, (counts.get(key) ?? 0) + 1)
   }
 
   const rows: Row[] = []
-  const emitted = new Set<string>()
+  const emittedCommon = new Set<string>()
+  const emittedMonth = new Set<string>()
   for (const t of tasks) {
+    if (t.due_date < oldCutoff) {
+      const monthKey = t.due_date.slice(0, 7)
+      if (emittedMonth.has(monthKey)) continue
+      emittedMonth.add(monthKey)
+      rows.push({
+        kind: "month",
+        key: `month:${monthKey}`,
+        tasks: tasks.filter((other) => other.due_date < oldCutoff && other.due_date.slice(0, 7) === monthKey),
+      })
+      continue
+    }
+
     const key = groupKey(t, building)
     if (key && (counts.get(key) ?? 0) > 1) {
-      if (emitted.has(key)) continue
-      emitted.add(key)
-      rows.push({ kind: "common", key, tasks: tasks.filter((other) => groupKey(other, building) === key) })
+      if (emittedCommon.has(key)) continue
+      emittedCommon.add(key)
+      rows.push({
+        kind: "common",
+        key,
+        tasks: tasks.filter((other) => other.due_date >= oldCutoff && groupKey(other, building) === key),
+      })
     } else {
       rows.push({ kind: "single", task: t })
     }
@@ -139,10 +172,27 @@ export default function Backoffice() {
 
   const orphanDryIce = useMemo(() => main.filter((t) => t.type === "PREP_DRY_ICE"), [main])
 
+  const oldCutoff = useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - OLD_SHIPMENT_DAYS)
+    return d.toISOString().slice(0, 10)
+  }, [])
+
   const rows = useMemo(
-    () => (orphanDryIceOnly ? orphanDryIce.map((task) => ({ kind: "single", task }) as Row) : groupCommonShipments(main, building)),
-    [orphanDryIceOnly, orphanDryIce, main, building]
+    () =>
+      orphanDryIceOnly
+        ? orphanDryIce.map((task) => ({ kind: "single", task }) as Row)
+        : groupCommonShipments(main, building, oldCutoff),
+    [orphanDryIceOnly, orphanDryIce, main, building, oldCutoff]
   )
+
+  async function bulkSetStatus(tasks: Task[], status: TaskStatus) {
+    await Promise.all(tasks.map((t) => setStatus(t.id, status)))
+  }
+
+  async function bulkSetCmrStatus(tasks: Task[], cmrStatus: CmrStatus) {
+    await Promise.all(tasks.map((t) => updateTask(t.id, { cmr_status: cmrStatus })))
+  }
 
   function openCreate() {
     setEditingTask(undefined)
@@ -340,37 +390,110 @@ export default function Backoffice() {
               </Fragment>
             )
           }
+          if (row.kind === "month") {
+            const isOpen = expandedGroups.has(row.key)
+            const dryIce = dryIceTotals(row.tasks, childrenByParent)
+            const wuTotal = workUnitsTotal(row.tasks, matrix)
+            return (
+              <Fragment key={row.key}>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(row.key)}
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-dashed px-3 py-2 text-left text-xs font-medium text-muted-foreground bg-muted/50"
+                >
+                  <span className="flex items-center gap-2">
+                    <Archive className="h-3.5 w-3.5 shrink-0" />
+                    {monthLabel(row.key.slice(6))} · {row.tasks.length} envois
+                    {wuTotal > 0 && ` · ${wuTotal.toFixed(2)} WU`}
+                    {dryIce && (
+                      <>
+                        {" "}
+                        · ❄️ {dryIce.cartons} cartons ({dryIce.kg} kg)
+                      </>
+                    )}
+                  </span>
+                  {isOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                </button>
+                {isOpen && (
+                  <div className="space-y-2 pl-3">
+                    {row.tasks.map((task) => (
+                      <Fragment key={task.id}>
+                        <TaskCard task={task} />
+                        {(childrenByParent.get(task.id) ?? []).map((child) => (
+                          <TaskCard key={child.id} task={child} linked />
+                        ))}
+                      </Fragment>
+                    ))}
+                  </div>
+                )}
+              </Fragment>
+            )
+          }
           const [first] = row.tasks
           const isOpen = expandedGroups.has(row.key)
           const dryIce = dryIceTotals(row.tasks, childrenByParent)
           const wuTotal = workUnitsTotal(row.tasks, matrix)
           return (
             <Fragment key={row.key}>
-              <button
-                type="button"
-                onClick={() => toggleGroup(row.key)}
+              <div
                 className={cardClass(
                   first,
-                  "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium text-muted-foreground bg-accent/40"
+                  "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-xs font-medium text-muted-foreground bg-accent/40"
                 )}
               >
-                <span>
-                  Commun · {first.due_date} · {destinationLabel(first, building)} · {carrierLabel(first)} ·{" "}
-                  {row.tasks.length} envois
-                  {wuTotal > 0 && ` · ${wuTotal.toFixed(2)} WU`}
-                  {dryIce && (
-                    <>
-                      {" "}
-                      · ❄️ {dryIce.cartons} cartons ({dryIce.kg} kg)
-                    </>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(row.key)}
+                  className="flex flex-1 items-center gap-2 text-left"
+                >
+                  <span>
+                    Commun · {first.due_date} · {destinationLabel(first, building)} · {carrierLabel(first)} ·{" "}
+                    {row.tasks.length} envois
+                    {wuTotal > 0 && ` · ${wuTotal.toFixed(2)} WU`}
+                    {dryIce && (
+                      <>
+                        {" "}
+                        · ❄️ {dryIce.cartons} cartons ({dryIce.kg} kg)
+                      </>
+                    )}
+                  </span>
+                  {isOpen ? (
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0" />
                   )}
-                </span>
-                {isOpen ? (
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-                )}
-              </button>
+                </button>
+                <div className="flex shrink-0 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <Select value="" onValueChange={(v) => bulkSetStatus(row.tasks, v as TaskStatus)}>
+                    <SelectTrigger className="h-7 w-auto gap-1 border-dashed bg-background px-2 text-xs">
+                      <SelectValue placeholder="Statut →" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STATUS_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value="" onValueChange={(v) => bulkSetCmrStatus(row.tasks, v as CmrStatus)}>
+                    <SelectTrigger className="h-7 w-auto gap-1 border-dashed bg-background px-2 text-xs">
+                      <SelectValue placeholder="CMR →" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CMR_STATUSES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {CMR_STATUS_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               {isOpen && (
                 <div className="space-y-2 pl-3">
                   {row.tasks.map((task) => (
