@@ -1,4 +1,4 @@
-import { Archive, ChevronDown, ChevronRight, Snowflake, Truck } from "lucide-react"
+import { Archive, ArrowDown, ArrowUp, ChevronDown, ChevronRight, Snowflake, Truck } from "lucide-react"
 import { Fragment, useMemo, useState } from "react"
 import { useTasks, useTaskMutations } from "@/hooks/useTasks"
 import { useAuth } from "@/hooks/useAuth"
@@ -128,6 +128,7 @@ export default function Backoffice() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "ALL">("ALL")
   const [search, setSearch] = useState("")
   const [orphanDryIceOnly, setOrphanDryIceOnly] = useState(false)
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc")
   const [formOpen, setFormOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | undefined>(undefined)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -163,10 +164,12 @@ export default function Backoffice() {
             .some((field) => field!.toLowerCase().includes(q))
         )
       : byStatus
+    const dir = sortDir === "asc" ? 1 : -1
     return [...bySearch].sort(
-      (a, b) => b.due_date.localeCompare(a.due_date) || (b.due_time ?? "").localeCompare(a.due_time ?? "")
+      (a, b) =>
+        dir * (a.due_date.localeCompare(b.due_date) || (a.due_time ?? "").localeCompare(b.due_time ?? ""))
     )
-  }, [tasks, statusFilter, search, building])
+  }, [tasks, statusFilter, search, building, sortDir])
 
   const { main, childrenByParent } = useMemo(() => linkPrepDryIce(filtered), [filtered])
 
@@ -366,6 +369,15 @@ export default function Backoffice() {
         >
           <Snowflake className="mr-2 h-4 w-4" />
           Orphan Dry Ice {orphanDryIce.length > 0 && `(${orphanDryIce.length})`}
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+        >
+          {sortDir === "asc" ? <ArrowUp className="mr-2 h-4 w-4" /> : <ArrowDown className="mr-2 h-4 w-4" />}
+          Date {sortDir === "asc" ? "(soonest first)" : "(latest first)"}
         </Button>
 
         <div className="ml-auto flex gap-2">
