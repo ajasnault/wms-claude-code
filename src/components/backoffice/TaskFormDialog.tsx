@@ -292,6 +292,13 @@ export function TaskFormDialog({
             )}
           </div>
 
+          {building === "K" && watch("type") === "ERP_DOCUMENT" && (
+            <div className="space-y-2">
+              <Label>Package count</Label>
+              <Input type="number" {...register("package_count")} />
+            </div>
+          )}
+
           {watch("type") === "ERP_DOCUMENT" && (
             <div className="space-y-2">
               <Label>Temperature group</Label>
