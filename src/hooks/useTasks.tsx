@@ -18,6 +18,9 @@ async function fetchTasks(): Promise<Task[]> {
       .select("*")
       .order("due_date", { ascending: true })
       .order("due_time", { ascending: true })
+      // many tasks share the same due_date + due_time; without a unique tiebreak
+      // the row order isn't stable between pages, so rows get duplicated or skipped
+      .order("id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
 
     if (error) throw error
