@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1b9898"/>
+  <g fill="none" stroke="#fff" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M256 96 L400 168 L400 312 L256 384 L112 312 L112 168 Z"/>
+    <path d="M112 168 L256 240 L400 168"/>
+    <path d="M256 240 L256 384"/>
+    <path d="M184 132 L328 204 L328 260"/>
+  </g>
+  <text x="256" y="452" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="64" font-weight="700" letter-spacing="8" fill="#fff">WMS</text>
+</svg>
